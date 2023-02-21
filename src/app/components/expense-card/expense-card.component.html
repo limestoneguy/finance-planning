@@ -1,0 +1,22 @@
+<ng-container [formGroup]="formGroup">
+    <div class="grid gap-3 min-w-max p-3 bg-gray-700 rounded-md">
+        <div class="flex items-center gap-3">
+            <input type="text" placeholder="Expense Name" formControlName="name" />
+            <div class="hover:text-red-500 cursor-pointer transition-colors" (click)="this.deleteEvent.emit(true)">
+                <fa-icon [icon]="['far', 'trash-can']"></fa-icon>
+            </div>
+        </div>
+        <input type="number" placeholder="Annual Salary" formControlName="amount" />
+        <textarea rows="4" placeholder="Expense Description..." formControlName="description"></textarea>
+        <div class="flex items-center radio-group">
+            <label>
+                <input type="radio" value="Monthly" name="occurence{{index}}" formControlName="occurence">
+                Monthly
+            </label>
+            <label>
+                <input type="radio" value="Annually" name="occurence{{index}}" formControlName="occurence">
+                Annually
+            </label>
+        </div>
+    </div>
+</ng-container>

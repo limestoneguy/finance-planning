@@ -1,0 +1,83 @@
+<div class="relative overflow-x-auto h-full shadow-md dark:bg-gray-800 " *ngIf="investmentobject">
+    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+        <thead class="text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-white">
+            <tr>
+                <th scope="col" class="px-6 py-3">
+                    Age
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    Asset Allocation
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    Annual Investment
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    Bond Investment
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    Bond Interest
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    Stock Investment
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    Stock Interest
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    Amount Collected
+                </th>
+
+                <th scope="col" class="px-6 py-3">
+                    Withdraw Amount
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    Withdraw Date
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    Withdraw reason
+                </th>
+
+            </tr>
+        </thead>
+        <tbody class="overflow-scroll">
+            <tr class="bg-white dark:text-white border-b dark:bg-gray-800 dark:border-gray-700 hover:opacity-100 opacity-50 cursor-pointer transition-opacity"
+                *ngFor="let yearPlan of investmentobject.investmentYearlyPlan; let index = index">
+                <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                    {{yearPlan.currentAge}}
+                </th>
+                <td class="px-6 py-4">
+                    {{yearPlan.assetAllocation.stocks}}/{{yearPlan.assetAllocation.bonds}}
+                </td>
+                <td class="px-6 py-4">
+                    {{yearPlan.annualInvestment| currency : 'INR'}}
+                </td>
+                <td class="px-6 py-4">
+                    {{yearPlan.bond.investment| currency : 'INR'}}
+                </td>
+                <td class="px-6 py-4">
+                    {{yearPlan.bond.interest | currency : 'INR'}}
+                </td>
+                <td class="px-6 py-4">
+                    {{yearPlan.stocks.investment| currency : 'INR'}}
+                </td>
+                <td class="px-6 py-4 font-bold"
+                    [ngClass]="yearPlan.stocks.interest < 0 ? 'text-red-500' : 'text-green-500'">
+                    {{yearPlan.stocks.interest | currency : 'INR'}}
+                </td>
+                <td class="px-6 py-4">
+                    {{yearPlan.retireAmount| currency : 'INR'}}
+                </td>
+
+                <td class="px-6 py-4 text-red-600 font-bold" *ngIf="yearPlan.withdrawal">
+                    {{yearPlan.withdrawal.amount| currency : 'INR'}}
+                </td>
+                <td class="px-6 py-4" *ngIf="yearPlan.withdrawal">
+                    {{yearPlan.withdrawal.goalDate| date}}
+                </td>
+                <td class="px-6 py-4" *ngIf="yearPlan.withdrawal">
+                    {{yearPlan.withdrawal.name}}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>

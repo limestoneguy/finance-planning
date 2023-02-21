@@ -1,0 +1,12 @@
+<ng-container [formGroup]="formGroup">
+    <div class="grid gap-3 min-w-max p-3 bg-gray-700 rounded-md">
+        <div class="flex items-center gap-3">
+            <input type="text" placeholder="Goal Name" formControlName="name" />
+            <div class="hover:text-red-500 cursor-pointer transition-colors" (click)="this.deleteEvent.emit(true)">
+                <fa-icon [icon]="['far', 'trash-can']"></fa-icon>
+            </div>
+        </div>
+        <input type="date" placeholder="Date Of Birth" formControlName="goalDate" />
+        <input type="number" placeholder="Goal Amount" formControlName="amount" />
+    </div>
+</ng-container>
