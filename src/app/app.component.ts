@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import * as moment from 'moment';
-import { tap } from 'rxjs';
+import { filter, tap } from 'rxjs';
 import FinancePlanner, { BreakupComponent, Expense, FinanceBreakUp, Goal, defaultFinancialBreakUp } from 'src/utils/FinancePlanner';
 import InvestmentPlanner, { RiskTolerance } from 'src/utils/InvestmentPlanner';
 import TaxPlanner from 'src/utils/TaxPlanner';
@@ -9,6 +9,7 @@ import TaxPlanner from 'src/utils/TaxPlanner';
 type financialBreakUpFormControl = { amount: FormControl<number>, name: FormControl<string>, isLocked: FormControl<boolean> }
 type FormType = Partial<{
   salary: number | undefined;
+  epf?: number;
   stopInvestmentAge?: number;
   isPreTax: boolean | undefined;
   retireAge?: number; expenses?: Expense[], goals: Goal[], withdrawals: Goal[], financialBreakUp: FinanceBreakUp, dateOfBirth: string
@@ -24,6 +25,7 @@ export class AppComponent implements OnInit {
   showInvestmentTable = false;
   userFormGroup: FormGroup = this.fb.group({
     salary: this.fb.control(1600000, { validators: [Validators.min(1500)] }),
+    epf: this.fb.control(115000, { validators: [Validators.min(1500)] }),
     isPreTax: this.fb.control(true, {}),
     stopInvestmentAge: this.fb.control(undefined),
     retireAge: this.fb.control(45, [Validators.required]),
@@ -56,41 +58,42 @@ export class AppComponent implements OnInit {
             (financialBreakUpFormGroup.controls[key] as FormGroup).controls['amount'].enable({ emitEvent: false });
           }
         })
-      }))
+      }), filter(val => this.userFormGroup.valid && val.salary !== undefined && val.isPreTax !== undefined))
       .subscribe((val) => { this.calculateUserFinance(val) });
     this.calculateUserFinance(this.userFormGroup.value);
   }
 
   calculateUserFinance(formValue: FormType) {
     formValue = this.userFormGroup.getRawValue();
-    if (!this.userFormGroup?.valid) return
-    if (formValue.salary === null || formValue.isPreTax === null) return;
     const taxObject = this.getTaxObject(formValue)
     const financeObject = this.getFinanceObject(formValue, taxObject);
+    if (!financeObject) throw new Error('financeObject is undefined');
     const investmentObject = this.getInvestmentObject(financeObject, formValue);
     this.financeObject = { financeObject, taxObject, investmentObject }
     this.userFormGroup.patchValue({ financialBreakUp: financeObject.financeBreakup }, { emitEvent: false });
   }
 
-  getInvestmentObject(financeObject: FinancePlanner, formValue: FormType) {
-    const investmentObject = new InvestmentPlanner({ amount: financeObject.investmentAmount, dob: formValue.dateOfBirth ?? '1997-03-22', riskTolerance: RiskTolerance.LOW, retireAge: formValue.retireAge })
-    formValue.withdrawals?.forEach(val => investmentObject.addWithdrawal(val));
-    if (formValue.stopInvestmentAge) {
-      investmentObject.stopInvestmentAge = formValue.stopInvestmentAge;
-    }
+  getInvestmentObject(financeObject: FinancePlanner, { withdrawals, stopInvestmentAge, dateOfBirth, retireAge, epf }: FormType) {
+    if (!dateOfBirth) return
+    const investmentObject = new InvestmentPlanner({ amount: financeObject.investmentAmount, dob: dateOfBirth, riskTolerance: RiskTolerance.LOW, retireAge, epfAmount: epf })
+    withdrawals?.forEach(val => investmentObject.addWithdrawal(val));
+    if (stopInvestmentAge)
+      investmentObject.stopInvestmentAge = stopInvestmentAge;
     return investmentObject;
   }
 
-  getTaxObject(formValue: FormType) {
-    const taxObject = formValue.isPreTax && new TaxPlanner({ grossSalary: formValue.salary });
+  getTaxObject({ salary, isPreTax }: FormType) {
+    if (!salary) return;
+    const taxObject = isPreTax && new TaxPlanner({ grossSalary: (salary) });
     return taxObject === false ? undefined : taxObject;
   }
 
-  getFinanceObject(formValue: FormType, taxObject?: TaxPlanner | false) {
-    const financeObject = taxObject ? new FinancePlanner({ monthlySalary: taxObject.inHandSalary / 12 }) : new FinancePlanner({ monthlySalary: (formValue.salary ?? 0) / 12 });
-    formValue.expenses?.forEach(val => financeObject.addExpense(val));
-    formValue.goals?.forEach(val => financeObject.addGoal(val));
-    const newFinancialBreakUp = this.getFinancialBreakUp(formValue.financialBreakUp);
+  getFinanceObject({ epf, salary, financialBreakUp, goals, expenses }: FormType, taxObject?: TaxPlanner | false) {
+    if (!salary || !epf) return;
+    const financeObject = taxObject ? new FinancePlanner({ monthlySalary: (taxObject.inHandSalary - (epf ?? 0)) / 12 }) : new FinancePlanner({ monthlySalary: salary - epf / 12 });
+    expenses?.forEach(val => financeObject.addExpense(val));
+    goals?.forEach(val => financeObject.addGoal(val));
+    const newFinancialBreakUp = this.getFinancialBreakUp(financialBreakUp);
     if (newFinancialBreakUp) {
       try {
         financeObject.financeBreakup = newFinancialBreakUp;
@@ -130,6 +133,14 @@ export class AppComponent implements OnInit {
       name: '',
       goalDate: '',
     });
+  }
+
+  get totalInHand() {
+    return this.financeObject?.taxObject?.inHandSalary ? this.financeObject.taxObject.inHandSalary - this.userFormGroup.value.epf : 0
+  }
+
+  get totalMonthly() {
+    return this.financeObject?.financeObject?.toJSON?.monthly_salary
   }
 
   removeFormArrayElement(index: number, controlName: string) {

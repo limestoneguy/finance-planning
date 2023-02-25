@@ -17,6 +17,7 @@ export type YearlyPlan = {
     currentAge: number,
     bond: { investment: number, interest: number },
     stocks: { investment: number, interest: number },
+    epf: { investment: number, interest: number },
     retireAmount: number
     withdrawal?: Goal
 }
@@ -52,10 +53,12 @@ export default class InvestmentPlanner {
             -0.0365,   // 2020
             0.2747    // 2021
         ],
-        BONDS: 0.08
+        BONDS: 0.09,
+        EPF: 0.08,
     }
+    private _epfYearlyContribution: number;
     private _withdrawals: Goal[] = [];
-    constructor(props: { dob: string, amount: number, riskTolerance: RiskTolerance, retireAge?: number, lumpsumAmount?: number }) {
+    constructor(props: { dob: string, amount: number, riskTolerance: RiskTolerance, retireAge?: number, lumpsumAmount?: number, epfAmount?: number }) {
         const dateObject = new Date(props.dob);
         this._retireAge = props.retireAge ?? 60;
         const userDateObject = moment(dateObject);
@@ -66,6 +69,7 @@ export default class InvestmentPlanner {
         this._dob = userDateObject;
         this._amount = props.amount;
         this._riskTolerance = props.riskTolerance;
+        this._epfYearlyContribution = props.epfAmount ?? 0;
     }
 
     public get assetAllocation() {
@@ -106,18 +110,20 @@ export default class InvestmentPlanner {
     }
 
     public get investmentYearlyPlan() {
-        let retireAmount = 0;
+        let retireAmount = this._lumpsumAmount;
         let currentAge = this.age;
         let bondInvestment = 0;
         let stocksInvestment = 0;
+        let epfInvestment = 0;
         const yearlyPlan: YearlyPlan[] = [];
 
         while (currentAge < this._retireAge) {
             const currentAgeRange = Math.round(currentAge / 10 - .3) * 10
             const currentAssetAllocation = this._assetAllocation(currentAgeRange)
-            const annualInvestment = this._stopInvestmentAge > 0 && this._stopInvestmentAge <= currentAge ? 0 : (this._amount * 12);
+            const annualInvestment = this._stopInvestmentAge > 0 && this._stopInvestmentAge <= currentAge ? 0 : ((this._amount * 12) - this._epfYearlyContribution);
             bondInvestment = (bondInvestment + (annualInvestment * (currentAssetAllocation.bonds / 100)));
             stocksInvestment = (stocksInvestment + (annualInvestment * (currentAssetAllocation.stocks / 100)))
+            epfInvestment += this._epfYearlyContribution;
             const checkWithdrawalYear = new Date().getFullYear() - this.age - 1 + currentAge;
             let withdrawal = this._withdrawals.find(val => moment(val.goalDate).year() === checkWithdrawalYear);
             if (withdrawal) {
@@ -128,20 +134,23 @@ export default class InvestmentPlanner {
                     stocksInvestment = 0;
                 }
             }
+            const epfInterest = this._assetInterestRate.EPF * epfInvestment;
             const bondInterest = this._assetInterestRate.BONDS * bondInvestment;
             const stocksInterest = this._assetInterestRate.STOCKS[(currentAge - this.age) % this._assetInterestRate.STOCKS.length] * stocksInvestment;
-            retireAmount = bondInvestment + bondInterest + stocksInvestment + stocksInterest;
+            retireAmount = bondInvestment + bondInterest + stocksInvestment + stocksInterest + epfInvestment + epfInterest;
             yearlyPlan.push({
                 assetAllocation: currentAssetAllocation,
                 annualInvestment,
                 currentAge,
                 bond: { investment: bondInvestment, interest: bondInterest },
                 stocks: { investment: stocksInvestment, interest: stocksInterest },
+                epf: { investment: epfInvestment, interest: epfInterest },
                 retireAmount,
                 withdrawal
             });
             bondInvestment += bondInterest;
             stocksInvestment += stocksInterest;
+            epfInvestment += epfInterest;
             currentAge++;
         }
         return yearlyPlan;
@@ -150,6 +159,10 @@ export default class InvestmentPlanner {
     set stopInvestmentAge(stopAge: number) {
         if (stopAge < this.age) throw new Error('You cannot stop before you invest');
         this._stopInvestmentAge = stopAge;
+    }
+
+    public get epfYearlyInvestment() {
+        return this._epfYearlyContribution
     }
 
     public get age() {

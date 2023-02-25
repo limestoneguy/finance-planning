@@ -24,8 +24,13 @@
         </div>
 
         <div class="flex items-center mt-4" [ngClass]="{'opacity-60': !this.userFormGroup.value?.isPreTax}">
+          <h2 class="text-xl flex-1">EPF Contribution</h2>
+          <input type="number" class="text-right flex-1" placeholder="EPF contribution" formControlName="epf" />
+        </div>
+
+        <div class="flex items-center mt-4" [ngClass]="{'opacity-60': !this.userFormGroup.value?.isPreTax}">
           <h2 class="text-xl">Total Inhand</h2>
-          <p class="flex-grow text-right font-bold"> {{financeObject?.taxObject?.inHandSalary | currency : 'INR'}}</p>
+          <p class="flex-grow text-right font-bold"> {{totalInHand | currency : 'INR'}}</p>
         </div>
 
         <div class="flex items-center mt-4">

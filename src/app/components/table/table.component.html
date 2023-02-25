@@ -18,6 +18,12 @@
                     Bond Interest
                 </th>
                 <th scope="col" class="px-6 py-3">
+                    EPF Investment
+                </th>
+                <th scope="col" class="px-6 py-3">
+                    EPF Interest
+                </th>
+                <th scope="col" class="px-6 py-3">
                     Stock Investment
                 </th>
                 <th scope="col" class="px-6 py-3">
@@ -56,6 +62,12 @@
                 </td>
                 <td class="px-6 py-4">
                     {{yearPlan.bond.interest | currency : 'INR'}}
+                </td>
+                <td class="px-6 py-4">
+                    {{yearPlan.epf.investment| currency : 'INR'}}
+                </td>
+                <td class="px-6 py-4">
+                    {{yearPlan.epf.interest | currency : 'INR'}}
                 </td>
                 <td class="px-6 py-4">
                     {{yearPlan.stocks.investment| currency : 'INR'}}

@@ -23,6 +23,12 @@ export class ChartComponent implements OnInit {
         label: 'Bonds',
         fill: true,
         tension: 0.5,
+      },
+      {
+        data: [],
+        label: 'EPF',
+        fill: true,
+        tension: 0.5,
       }
     ],
     labels: []
@@ -44,6 +50,7 @@ export class ChartComponent implements OnInit {
       acc.labels?.push(val.currentAge);
       acc.datasets[0].data.push(val.stocks.investment + val.stocks.interest);
       acc.datasets[1].data.push(val.bond.investment + val.bond.interest);
+      acc.datasets[2].data.push(val.epf.investment + val.epf.interest);
       return acc;
     }, this.lineChartDataInitValue);
     console.log(chartOptions, this?.investmentObject?.investmentYearlyPlan);
