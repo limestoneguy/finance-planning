@@ -30,6 +30,7 @@ export default class InvestmentPlanner {
     private _retireAge: number;
     private _lumpsumAmount = 0;
     private _stopInvestmentAge = 0;
+    private _adjustForInflation = false;
     private _assetInterestRate = {
         STOCKS: [
             -0.1746,   // 2002
@@ -55,10 +56,16 @@ export default class InvestmentPlanner {
         ],
         BONDS: 0.09,
         EPF: 0.08,
+        INFLATION: 0.05,
     }
     private _epfYearlyContribution: number;
     private _withdrawals: Goal[] = [];
-    constructor(props: { dob: string, amount: number, riskTolerance: RiskTolerance, retireAge?: number, lumpsumAmount?: number, epfAmount?: number }) {
+    constructor(props: {
+        dob: string,
+        amount: number,
+        adjustForInflation?: boolean,
+        riskTolerance: RiskTolerance, retireAge?: number, lumpsumAmount?: number, epfAmount?: number
+    }) {
         const dateObject = new Date(props.dob);
         this._retireAge = props.retireAge ?? 60;
         const userDateObject = moment(dateObject);
@@ -70,6 +77,7 @@ export default class InvestmentPlanner {
         this._amount = props.amount;
         this._riskTolerance = props.riskTolerance;
         this._epfYearlyContribution = props.epfAmount ?? 0;
+        this._adjustForInflation = props.adjustForInflation ?? this._adjustForInflation;
     }
 
     public get assetAllocation() {
@@ -134,9 +142,9 @@ export default class InvestmentPlanner {
                     stocksInvestment = 0;
                 }
             }
-            const epfInterest = this._assetInterestRate.EPF * epfInvestment;
-            const bondInterest = this._assetInterestRate.BONDS * bondInvestment;
-            const stocksInterest = this._assetInterestRate.STOCKS[(currentAge - this.age) % this._assetInterestRate.STOCKS.length] * stocksInvestment;
+            const epfInterest = this.assetInterestRate.EPF * epfInvestment;
+            const bondInterest = this.assetInterestRate.BONDS * bondInvestment;
+            const stocksInterest = this.assetInterestRate.STOCKS[(currentAge - this.age) % this.assetInterestRate.STOCKS.length] * stocksInvestment;
             retireAmount = bondInvestment + bondInterest + stocksInvestment + stocksInterest + epfInvestment + epfInterest;
             yearlyPlan.push({
                 assetAllocation: currentAssetAllocation,
@@ -154,6 +162,18 @@ export default class InvestmentPlanner {
             currentAge++;
         }
         return yearlyPlan;
+    }
+
+    public get assetInterestRate(): typeof this._assetInterestRate {
+        const returnValue = { ...this._assetInterestRate };
+        if (!this._adjustForInflation) {
+            return returnValue
+        }
+
+        returnValue.BONDS = (((1 + this._assetInterestRate.BONDS) / (this._assetInterestRate.INFLATION + 1)) - 1)
+        returnValue.EPF = (((1 + this._assetInterestRate.EPF) / (this._assetInterestRate.INFLATION + 1)) - 1)
+        returnValue.STOCKS = this._assetInterestRate.STOCKS.map(val => (((1 + val) / (this._assetInterestRate.INFLATION + 1)) - 1))
+        return returnValue;
     }
 
     set stopInvestmentAge(stopAge: number) {

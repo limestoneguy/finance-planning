@@ -12,6 +12,7 @@ type FormType = Partial<{
   epf?: number;
   stopInvestmentAge?: number;
   isPreTax: boolean | undefined;
+  adjustForInflation?: boolean
   retireAge?: number; expenses?: Expense[], goals: Goal[], withdrawals: Goal[], financialBreakUp: FinanceBreakUp, dateOfBirth: string
 }>;
 
@@ -27,6 +28,7 @@ export class AppComponent implements OnInit {
     salary: this.fb.control(1600000, { validators: [Validators.min(1500)] }),
     epf: this.fb.control(115000, { validators: [Validators.min(1500)] }),
     isPreTax: this.fb.control(true, {}),
+    adjustForInflation: this.fb.control(false, {}),
     stopInvestmentAge: this.fb.control(undefined),
     retireAge: this.fb.control(45, [Validators.required]),
     dateOfBirth: this.fb.control(moment().subtract(25, 'years').toISOString().split('T').shift()),
@@ -73,9 +75,9 @@ export class AppComponent implements OnInit {
     this.userFormGroup.patchValue({ financialBreakUp: financeObject.financeBreakup }, { emitEvent: false });
   }
 
-  getInvestmentObject(financeObject: FinancePlanner, { withdrawals, stopInvestmentAge, dateOfBirth, retireAge, epf }: FormType) {
+  getInvestmentObject(financeObject: FinancePlanner, { withdrawals, stopInvestmentAge, dateOfBirth, retireAge, epf, adjustForInflation }: FormType) {
     if (!dateOfBirth) return
-    const investmentObject = new InvestmentPlanner({ amount: financeObject.investmentAmount, dob: dateOfBirth, riskTolerance: RiskTolerance.LOW, retireAge, epfAmount: epf })
+    const investmentObject = new InvestmentPlanner({ amount: financeObject.investmentAmount, dob: dateOfBirth, riskTolerance: RiskTolerance.LOW, retireAge, epfAmount: epf, adjustForInflation })
     withdrawals?.forEach(val => investmentObject.addWithdrawal(val));
     if (stopInvestmentAge)
       investmentObject.stopInvestmentAge = stopInvestmentAge;
