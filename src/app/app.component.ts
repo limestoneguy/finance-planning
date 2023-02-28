@@ -7,14 +7,14 @@ import InvestmentPlanner, { RiskTolerance } from 'src/utils/InvestmentPlanner';
 import TaxPlanner from 'src/utils/TaxPlanner';
 
 type financialBreakUpFormControl = { amount: FormControl<number>, name: FormControl<string>, isLocked: FormControl<boolean> }
-type FormType = Partial<{
+type FormType = {
   salary: number | undefined;
   epf?: number;
   stopInvestmentAge?: number;
   isPreTax: boolean | undefined;
   adjustForInflation?: boolean
   retireAge?: number; expenses?: Expense[], goals: Goal[], withdrawals: Goal[], financialBreakUp: FinanceBreakUp, dateOfBirth: string
-}>;
+};
 
 @Component({
   selector: 'app-root',
@@ -31,14 +31,14 @@ export class AppComponent implements OnInit {
     adjustForInflation: this.fb.control(false, {}),
     stopInvestmentAge: this.fb.control(undefined),
     retireAge: this.fb.control(45, [Validators.required]),
-    dateOfBirth: this.fb.control(moment().subtract(25, 'years').toISOString().split('T').shift()),
+    dateOfBirth: this.fb.control(moment().subtract(25, 'years').toISOString().split('T').shift(), [Validators.required]),
     expenses: this.fb.array([]),
     goals: this.fb.array([]),
     withdrawals: this.fb.array([this.goalFormGroup]),
     financialBreakUp: this.fb.group(this.financialBreakupForm)
   });
   userFormGroupFinancialBreakUpOld?: FinanceBreakUp;
-  financeObject?: { taxObject?: TaxPlanner, financeObject: FinancePlanner, investmentObject?: InvestmentPlanner };
+  financeObject?: { taxObject?: TaxPlanner, financeObject: FinancePlanner, investmentObject: InvestmentPlanner };
   selectedLayout: 'table' | 'chart' = 'table';
 
   constructor(private fb: FormBuilder) {
@@ -76,7 +76,6 @@ export class AppComponent implements OnInit {
   }
 
   getInvestmentObject(financeObject: FinancePlanner, { withdrawals, stopInvestmentAge, dateOfBirth, retireAge, epf, adjustForInflation }: FormType) {
-    if (!dateOfBirth) return
     const investmentObject = new InvestmentPlanner({ amount: financeObject.investmentAmount, dob: dateOfBirth, riskTolerance: RiskTolerance.LOW, retireAge, epfAmount: epf, adjustForInflation })
     withdrawals?.forEach(val => investmentObject.addWithdrawal(val));
     if (stopInvestmentAge)
@@ -92,7 +91,7 @@ export class AppComponent implements OnInit {
 
   getFinanceObject({ epf, salary, financialBreakUp, goals, expenses }: FormType, taxObject?: TaxPlanner | false) {
     if (!salary || !epf) return;
-    const financeObject = taxObject ? new FinancePlanner({ monthlySalary: (taxObject.inHandSalary - (epf ?? 0)) / 12 }) : new FinancePlanner({ monthlySalary: salary - epf / 12 });
+    const financeObject = taxObject ? new FinancePlanner({ monthlySalary: (taxObject.inHandSalary - (epf ?? 0)) / 12 }) : new FinancePlanner({ monthlySalary: (salary - epf) / 12 });
     expenses?.forEach(val => financeObject.addExpense(val));
     goals?.forEach(val => financeObject.addGoal(val));
     const newFinancialBreakUp = this.getFinancialBreakUp(financialBreakUp);
@@ -138,7 +137,9 @@ export class AppComponent implements OnInit {
   }
 
   get totalInHand() {
-    return this.financeObject?.taxObject?.inHandSalary ? this.financeObject.taxObject.inHandSalary - this.userFormGroup.value.epf : 0
+    if (this.financeObject === undefined) return 0;
+    const { taxObject, investmentObject } = this.financeObject;
+    return taxObject?.inHandSalary ? taxObject.inHandSalary - investmentObject.epfYearlyInvestment : this.userFormGroup.value.salary - investmentObject.epfYearlyInvestment
   }
 
   get totalMonthly() {
